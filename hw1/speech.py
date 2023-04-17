@@ -17,6 +17,7 @@ def read_files(tarfname):
 	trainy,devy: array of int labels, one for each document
 	"""
 	import tarfile
+	from sklearn.pipeline import Pipeline, FeatureUnion
 	tar = tarfile.open(tarfname, "r:gz")
 	class Data: pass
 	speech = Data()
@@ -27,10 +28,23 @@ def read_files(tarfname):
 	speech.dev_data, speech.dev_fnames, speech.dev_labels = read_tsv(tar, "dev.tsv")
 	print(len(speech.dev_data))
 	print("-- transforming data and labels")
-	from sklearn.feature_extraction.text import CountVectorizer
+	from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer, TfidfTransformer
 	speech.count_vect = CountVectorizer()
+	# speech.count_vect = TfidfVectorizer()
+	# combined_features = FeatureUnion([("CountVectorizer", count_vect1), ("TfidfVectorizer", count_vect2)])
+
+	# speech.trainX = combined_features.fit(speech.train_data, speech.train_fnames).transform(speech.train_data)
+	# speech.devX = combined_features.fit(speech.dev_data, speech.dev_fnames).transform(speech.dev_data)
+
+
+
 	speech.trainX = speech.count_vect.fit_transform(speech.train_data)
 	speech.devX = speech.count_vect.transform(speech.dev_data)
+
+	tfidf_transformer = TfidfTransformer()
+	speech.trainX = tfidf_transformer.fit_transform(speech.trainX)
+	# speech.devX = tfidf_transformer.fit_transform(speech.devX)
+
 	from sklearn import preprocessing
 	speech.le = preprocessing.LabelEncoder()
 	speech.le.fit(speech.train_labels)
@@ -163,6 +177,8 @@ if __name__ == "__main__":
 	import classify
 	cls = classify.train_classifier(speech.trainX, speech.trainy)
 	print("Evaluating")
+	print('feature size', speech.trainX.shape)
+	print('label size', speech.trainy.shape)
 	classify.evaluate(speech.trainX, speech.trainy, cls)
 	classify.evaluate(speech.devX, speech.devy, cls)
 
